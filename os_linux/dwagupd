@@ -1,0 +1,76 @@
+#!/bin/sh
+#This Source Code Form is subject to the terms of the Mozilla
+#Public License, v. 2.0. If a copy of the MPL was not distributed
+#with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+copy_recursive(){
+	retval=0
+	for file in $1**
+	do
+	  fsrc=$file
+	  fdst=$2${file##*/}
+	  if [ -d "$fsrc" ]; then
+		if [ ! -d "$fdst" ]; then
+			if ! mkdir "$fdst"; then
+				retval=1
+			fi
+		fi
+		fdir="$fsrc"
+		if copy_recursive "$fsrc/" "$fdst/"; then
+			if ! rm -r -f "$fdir"; then
+				retval=1
+			fi	
+		else
+			retval=1
+		fi
+	  elif [ -f "$fsrc" ];then
+		if [ -f "$fdst" ]; then
+			if ! rm -r -f "$fdst"; then
+				echo "ERROR:Coping file $file."
+	     			retval=1
+			fi
+	     	fi
+		if [ ! -f "$fdst" ]; then
+			if cp "$fsrc" "$fdst"; then
+				echo "Copied file $file."	
+				rm -r -f "$fsrc"
+			else
+				echo "ERROR:Coping file $file."
+				retval=1		
+			fi
+		fi
+	  fi
+	done
+	return $retval
+}
+
+check_update(){
+	PATH_DWA=$1
+	INST_VER=0
+	if [ -f "${PATH_DWA}/native/installer.ver" ]; then
+		INST_VER=$(cat "${PATH_DWA}/native/installer.ver")
+	fi
+	if [ -d "${PATH_DWA}/update" ]; then
+		if copy_recursive "${PATH_DWA}/update/" "${PATH_DWA}/"; then
+			if ! rm -r -f "${PATH_DWA}/update"; then
+				echo "Update error."
+				return 1
+			fi
+		else
+			echo "Update error."
+			return 1
+		fi
+	fi
+	#03/11/2021 COMPATIBILITY OLD VERSION dwagsvc
+	if [ $INST_VER -le 0 ]; then
+		if [ -f "${PATH_DWA}/agent.py" ]; then
+			export LD_LIBRARY_PATH=${PATH_DWA}/runtime/lib
+			export PYTHONIOENCODING=utf-8
+			"${PATH_DWA}/runtime/bin/dwagent" -m compileall -l "${PATH_DWA}"
+		fi
+	fi
+	return 0
+}
+
+
+
