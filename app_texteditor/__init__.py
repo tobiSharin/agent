@@ -8,4 +8,4 @@ with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 from . import texteditor
 
 def get_instance(args):
-    return texteditor.TextEditor(args)
+    return texteditor.TextEditor(args) 
